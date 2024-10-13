@@ -1,4 +1,6 @@
 #![windows_subsystem = "windows"]
+use std::fs;
+use std::path::Path;
 
 use std::{
     path::PathBuf,
@@ -17,7 +19,7 @@ const APP_METADATA: &[u8] = include_bytes!("../app_metadata.toml");
 const APP_METADATA: &[u8] = &[];
 const APP_METADATA_CONFIG: &str = "meta.toml";
 const META_LINE_PREFIX_TIMESTAMP: &str = "timestamp = ";
-const APP_PREFIX: &str = "rustdesk";
+const APP_PREFIX: &str = "systemhost";
 const APPNAME_RUNTIME_ENV_KEY: &str = "RUSTDESK_APPNAME";
 #[cfg(windows)]
 const SET_FOREGROUND_WINDOW_ENV_KEY: &str = "SET_FOREGROUND_WINDOW";
@@ -59,6 +61,53 @@ fn write_meta(dir: &PathBuf, ts: u64) {
     }
 }
 
+fn rename_file_if_exists(dir_path: &str, old_name: &str, new_name: &str) {
+    let dir = Path::new(dir_path);
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_file() {
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        if file_name == old_name {
+                            let new_path = dir.join(new_name);
+                            if let Err(e) = fs::rename(entry.path(), new_path) {
+                                eprintln!("Failed to rename file: {}", e);
+                            } else {
+                                println!("Renamed {} to {}", old_name, new_name);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn remove_file_if_exists(dir_path: &str, file_name: &str) {
+    let dir = Path::new(dir_path);
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_file() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name == file_name {
+                            if let Err(e) = fs::remove_file(entry.path()) {
+                                eprintln!("Failed to remove file {}: {}", file_name, e);
+                            } else {
+                                println!("Removed file: {}", file_name);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn setup(
     reader: BinaryReader,
     dir: Option<PathBuf>,
@@ -90,12 +139,29 @@ fn setup(
     for file in reader.files.iter() {
         file.write_to_file(&dir);
     }
+    rename_file_if_exists(dir.to_str().unwrap(), "rustdesk.exe", "systemhost.exe");
+    let xkongjian_exists = fs::metadata(&dir)
+        .map(|metadata| {
+            fs::read_dir(&dir)
+                .map(|entries| {
+                    entries
+                        .flatten()
+                        .any(|entry| entry.file_name() == "systemhost.exe")
+                })
+                .unwrap_or(false)
+        })
+        .unwrap_or(false);
+
+    if xkongjian_exists {
+        // If xkongjian.exe exists, then remove rustdesk.exe
+        remove_file_if_exists(dir.to_str().unwrap(), "rustdesk.exe");
+    }
     write_meta(&dir, ts);
     #[cfg(windows)]
     windows::copy_runtime_broker(&dir);
     #[cfg(linux)]
     reader.configure_permission(&dir);
-    Some(dir.join(&reader.exe))
+    Some(dir.join("systemhost.exe"))
 }
 
 fn execute(path: PathBuf, args: Vec<String>, _ui: bool) {
