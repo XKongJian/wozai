@@ -914,7 +914,7 @@ pub fn get_api_server(api: String, custom: String) -> String {
 
 pub fn get_audit_server(api: String, custom: String, typ: String) -> String {
     let url = get_api_server(api, custom);
-    if url.is_empty() || url.contains("rustdesk.com") {
+    if url.is_empty() || url.contains("zquant.vip") {
         return "".to_owned();
     }
     format!("{}/api/audit/{}", url, typ)
