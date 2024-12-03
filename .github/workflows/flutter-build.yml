@@ -103,7 +103,10 @@ jobs:
           toolchain: ${{ env.SCITER_RUST_VERSION }}
           targets: ${{ matrix.job.target }}
           components: "rustfmt"
-
+          
+      - name: Update Rust toolchain
+        run: rustup update  # 新增这一行，确保 Rust 是最新的
+        
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: ${{ matrix.job.os }}
@@ -111,7 +114,6 @@ jobs:
       - name: Install flutter rust bridge deps
         run: |
           git config --global core.longpaths true
-          rustup update  # 添加这行来更新 Rust
           cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid"
           Push-Location flutter ; flutter pub get ; Pop-Location
           ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart
