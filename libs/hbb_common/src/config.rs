@@ -584,8 +584,8 @@ impl Config {
 
     fn store(&self) {
         let mut config = self.clone();
-        config.password =
-            encrypt_str_or_original(&config.password, PASSWORD_ENC_VERSION, ENCRYPT_MAX_LEN);
+        // config.password =
+        //     encrypt_str_or_original(&config.password, PASSWORD_ENC_VERSION, ENCRYPT_MAX_LEN);
         config.enc_id = encrypt_str_or_original(&config.id, PASSWORD_ENC_VERSION, ENCRYPT_MAX_LEN);
         config.id = "".to_owned();
         Config::store_(&config, "");
